@@ -201,7 +201,8 @@ if (D.realtime) {
     ['丽胜（成都）', byName('丽胜（成都）')],
     ['B站三连（联通+移动+新官方移动）', byName('B站')],
     ['未归因（归因链路未覆盖）', byName('未归因')],
-  ];
+  ].concat((R.rows || []).filter(r => r.line && ['满格', '丽胜', '丽胜（成都）', 'B站', '未归因'].indexOf(r.line) < 0)
+      .map(r => [r.line + '（自动渲染）', r]));
   const f2 = v => v === null || v === undefined ? '—' : '¥' + Math.round(Number(v)).toLocaleString('zh-CN');
   const f0 = v => v === null || v === undefined ? '—' : Number(v).toLocaleString('zh-CN');
   document.getElementById('rtUpd').textContent = '更新：' + R.updated + '（当日实时累计）';
