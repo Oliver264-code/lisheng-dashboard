@@ -213,7 +213,15 @@ if (D.realtime) {
         const cvr = c.leads ? (c.orders / c.leads * 100).toFixed(1) + '%' : '—';
         return `<tr><td>${x[0]}</td><td>${f2(c.spend)}</td><td>${f0(c.leads)}</td><td>${f2(c.lead_cost)}</td><td>${f0(c.orders)}</td><td><b>${cvr}</b></td><td>${f2(c.order_cost)}</td></tr>`;
       }).join('')
-    + `<tr><td><b>总计</b></td><td><b>${f2(R.total_spend)}</b></td><td><b>${f0(R.total_leads)}</b></td><td><b>${f2(R.total_lead_cost)}</b></td><td><b>${f0(R.total_orders)}</b></td><td><b>${R.total_cvr != null ? R.total_cvr.toFixed(1) + '%' : (R.total_leads ? (R.total_orders / R.total_leads * 100).toFixed(1) + '%' : '—')}</b></td><td><b>${f2(R.total_order_cost)}</b></td></tr>`;
+    + (() => { const _xh = (R.rows || []).filter(r => r.line !== 'B站' && r.line !== '未归因');
+        const _tl = _xh.reduce((s, r) => s + (r.leads || 0), 0);
+        const _ts = (R.rows || []).reduce((s, r) => s + (r.spend || 0), 0);
+        const _b = (R.rows || []).find(r => r.line === 'B站') || {};
+        const _to = (R.rows || []).reduce((s, r) => s + (r.orders || 0), 0);
+        const _lc = _tl ? (_ts - (_b.spend || 0)) / _tl : null;
+        const _cv = _tl ? ((_to - (_b.orders || 0)) / _tl * 100).toFixed(1) + '%' : '—';
+        const _oc = _to ? _ts / _to : null;
+        return `<tr><td><b>总计</b></td><td><b>${f2(_ts)}</b></td><td><b>${f0(_tl)}</b></td><td><b>${f2(_lc)}</b></td><td><b>${f0(_to)}</b></td><td><b>${_cv}</b></td><td><b>${f2(_oc)}</b></td></tr>`; })()`;
   document.getElementById('rtNote').textContent =
     '更新节奏：每天 9:00 / 12:00 / 15:00 / 18:00 / 21:00 自动刷新当日实时数据；新进线数/进线转化率仅小红书条线（进线转化率=新客户单量÷新进线数，总计行=小红书单量÷小红书进线）；B站只统计消耗与订单成本；新客户单量=当日真实用户下单按归因条线拆分（未归因单列，归档的营业厅/镜像户残余单折入未归因与满格行）；工单废弃单计入有效订单。营业厅9593754、满格镜像9320987 两户已归档，实时统计已移除（2026-10-28 指令）。';
 }
