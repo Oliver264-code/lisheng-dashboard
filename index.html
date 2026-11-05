@@ -175,6 +175,8 @@ function renderKPI(rows) {
     ['广告费余额', fmt(full ? D.remain : remain), full ? '= 5万 − 总消耗（含今日实时，10-27 起 5 万盘）' : '截至 ' + (rows.length ? rows[rows.length-1].date : LAST()), (full ? D.remain : remain) < 5000 ? 'red' : 'green'],
     ['进线数', fmt0(leads), '满格 ' + fmt0(sum(r => (r.leads_lines || {})['满格'])) +
       ' · 营业厅 ' + fmt0(sum(r => (r.leads_lines || {})['营业厅'])) +
+      ' · 丽胜 ' + fmt0(sum(r => (r.leads_lines || {})['丽胜'])) +
+      ' · 成都 ' + fmt0(sum(r => (r.leads_lines || {})['丽胜（成都）'])) +
       ' · B站线索 ' + fmt0(sum(r => (r.leads_lines || {})['B站'])), ''],
     ['进线成本', fmt(xhsLeads ? (spend - sum(r => r.spend_bili)) / xhsLeads : null), '聚光消耗 ÷ 聚光进线（B站不计）', ''],
     ['转化率(已归因)', pct(xhsLeads ? sum(r => r.xhs_attr_orders || 0) / xhsLeads * 100 : null), '已归因订单 ÷ 小红书进线；含未归因对照 ' + pct(xhsLeads ? xhsOrders / xhsLeads * 100 : null) + '%（老板10-24拍板主口径=已归因）', 'blue'],
@@ -205,7 +207,8 @@ if (D.realtime) {
       .map(r => [r.line + '（自动渲染）', r]));   // 063建议采纳：新增条线自动追加行，防硬编码漏行（11-04）
   const f2 = v => v === null || v === undefined ? '—' : '¥' + Math.round(Number(v)).toLocaleString('zh-CN');
   const f0 = v => v === null || v === undefined ? '—' : Number(v).toLocaleString('zh-CN');
-  document.getElementById('rtUpd').textContent = '更新：' + R.updated + '（当日实时累计）';
+  document.getElementById('rtUpd').textContent = '更新：' + R.updated + '（当日实时累计）'
+    + ((R.warns || []).some(w => String(w).indexOf('兜底') >= 0) ? '｜⚠今日进线口径=咨询用户数（平台实时私信字段未出数，已自动兜底）' : '');
   document.getElementById('tblRt').innerHTML =
     '<tr><th>条线</th><th>今日实时消耗¥</th><th>新进线数</th><th>进线成本¥</th><th>新客户单量</th><th>进线转化率</th><th>订单成本¥</th></tr>'
     + rtRows.map(x => {
@@ -241,13 +244,14 @@ function renderLineSummary(rows) {
   const LL = {'满格': sLine('leads_满格'), '营业厅': sLine('leads_营业厅'), '丽胜': sLine('leads_丽胜'), '丽胜（成都）': sLine('leads_丽胜成都'), 'B站': sLine('leads_B站')};
   const LD = {'极速满格': sLine('deliv_满格'), '满格镜像': sLine('deliv_满格镜像'), '营业厅': sLine('deliv_营业厅'), '丽胜': sLine('deliv_丽胜'),
               '丽胜（成都）': sLine('deliv_丽胜成都'), 'B站': sLine('deliv_B站'), '其他未归因': sLine('deliv_其他未归因')};
-  // 注意：订单/交付按行字段聚合，进线只有满格/营业厅/丽胜/B站四线
+  // 注意：三组键名约定——LT/LD 存取键='丽胜（成都）'（全角），进线存取键同；行内 sLine 读 line_rows 的无括号键。
+  // v8 修复：成都行此前 lkey=null 且订单键写错（'丽胜成都'查不到'丽胜（成都）'）→ 进线/订单恒 0（11-04~11-05 事故）
   const spendMirror = sumR('spend_mirror');
   const lines = [
     ['满格', '极速满格', '满格', spendOf['满格']],
     ['营业厅', '营业厅', '营业厅', spendOf['营业厅']],
     ['丽胜', '丽胜', '丽胜', spendOf['丽胜']],
-    ['丽胜（成都）', '丽胜成都', null, spendOf['丽胜（成都）'] ?? null],
+    ['丽胜（成都）', '丽胜（成都）', '丽胜（成都）', spendOf['丽胜（成都）'] ?? null],
     ['B站', 'B站', 'B站', spendOf['B站']],
     ['满格(镜像)', '满格镜像', null, spendMirror],   // 消耗已并入满格行计总账，此处单列展示
     ['其他未归因', '其他未归因', null, null],
