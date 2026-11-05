@@ -288,24 +288,30 @@ function renderNoteRT() {
   const R = D.realtime || {};
   const MK = (NW && NW.makers) || {};
   const ref = R.total_orders ? Math.round(R.total_spend / R.total_orders) : null;
-  if (!NW || !NW.rows || !NW.rows.length) {
-    el.innerHTML = '<tr><td>今日暂无日耗≥¥' + ((NW && NW.threshold) || 150) + ' 且无出单的笔记</td></tr>';
-  } else {
-    let h = '<tr><th>创意名</th><th>笔记ID</th><th>制作人</th><th>条线</th><th>消耗¥</th><th>进线</th><th>进线成本¥</th><th>留资</th><th>咨询</th><th>归因单</th><th>转化成本¥</th><th>判定参考</th></tr>';
-    for (const r of NW.rows) {
-      let jt, jc;
-      if (r.orders > 0) { jt = '✅ 有单（¥' + Math.round(r.spend / r.orders) + '/单' + (ref ? '，参考¥' + ref : '') + '）'; jc = '#15803d'; }
-      else if (!r.leads && !r.users) { jt = '🔴 零留资零单（查计划/降价/关停）'; jc = '#c2410c'; }
-      else { jt = '🟠 有留资无单（观察素材/套餐）'; jc = '#a16207'; }
-      h += `<tr><td>${(r.creative || '—').slice(0, 34)}</td><td style="font-family:monospace">${(r.note_id || '').slice(0, 16)}</td><td>${MK[r.note_id] || '—'}</td><td>${r.line}</td><td><b>${f2(r.spend)}</b></td><td>${f0(r.mc)}</td><td>${r.mc ? f2(r.spend / r.mc) : '—'}</td><td>${f0(r.leads)}</td><td>${f0(r.users)}</td><td>${f0(r.orders)}</td><td>${r.orders ? f2(r.spend / r.orders) : '—'}</td><td style="color:${jc}">${jt}</td></tr>`;
-    }
-    const m = NW.merged || {};
-    h += `<tr style="color:#667;background:#fafafa"><td colspan="4">${m.title || '其他创意合并'}（${m.n_notes || 0} 笔记）</td><td>${f2(m.spend)}</td><td>${f0(m.mc)}</td><td>${m.mc ? f2(m.spend / m.mc) : '—'}</td><td>${f0(m.leads)}</td><td>${f0(m.users)}</td><td>${f0(m.orders)}</td><td>${m.orders ? f2(m.spend / m.orders) : '—'}</td><td>跑量期合并观察</td></tr>`;
-    el.innerHTML = h;
-  }
+  const NOTE_TXT =
+    '口径：数据源=聚光 marketing-analysis 笔记投放分析（当日实时，随 9/12/15/18/21 实时班刷新）；<b>进线=单元实时报表私信咨询，共享单元按创意消耗占比拆分（T+1 创意报表口径见下方历史汇总）</b>；归因单=执行方证据链归因单（xhs 条线单下钻到创意，B站单不在本表；转化成本=消耗÷归因单）。判定：🔴零留资零单=跑飞预警（查计划/降价/关停）；✅有单=看转化成本 vs 今日全局参考订单成本；🟠有留资无单=观察。一条笔记可多创意（行=创意），择优续投；<b>今日创意消耗≥¥150 或当日出单的创意单独一行（出单全量单列，供实时控价；11-5 指令）</b>，其余（无单且<¥150）并入合并行；<b>出单笔记凡证据可及均单列（含零耗直归行）；仅短链自然单等完全无笔记证据的单留在合并行并标注（制作人只统计 健强/杨韶/雨婷，其余归旧笔记素材，11-5 指令）</b>。结算口径（意向单含废弃/剔测试）见下方历史汇总表。';
+  document.getElementById('noteRtNote').innerHTML = NOTE_TXT;
   document.getElementById('nwRtUpd').textContent = '更新 ' + (R.updated || '—') + '｜今日笔记消耗合计 ¥' + Math.round((NW && NW.note_total_spend) || 0).toLocaleString() + '｜进线合计 ' + ((NW && NW.note_total_mc) || 0).toLocaleString();
-  document.getElementById('noteRtNote').innerHTML =
-    '口径：数据源=聚光 marketing-analysis 笔记投放分析（当日实时，随 9/12/15/18/21 实时班刷新）；<b>进线=单元实时报表私信咨询，共享单元按创意消耗占比拆分（T+1 创意报表口径见下方历史汇总）</b>；归因单=执行方证据链归因单（xhs 条线单下钻到创意，B站单不在本表；转化成本=消耗÷归因单）。判定：🔴零留资零单=跑飞预警（查计划/降价/关停）；✅有单=看转化成本 vs 今日全局参考订单成本；🟠有留资无单=观察。一条笔记可多创意（行=创意），择优续投；<b>今日创意消耗≥¥150 或当日出单的创意单独一行（出单全量单列，供实时控价；11-5 指令）</b>，其余（无单且<¥150）并入合并行，合并行转化成本=合并消耗÷合并归因单；<b>出单但今日无投放数据的笔记以零耗行展示（证据直归）；制作人只统计 健强/杨韶/雨婷，其余归旧笔记素材（11-5 指令）</b>。结算口径（意向单含废弃/剔测试）见下方历史汇总表。';
+  if (!NW) { el.innerHTML = '<tr><td>今日实时板块数据缺失</td></tr>'; return; }
+  const m = NW.merged || {};
+  let h = '<tr><th>创意名</th><th>笔记ID</th><th>制作人</th><th>条线</th><th>消耗¥</th><th>进线</th><th>进线成本¥</th><th>留资</th><th>咨询</th><th>归因单</th><th>转化成本¥</th><th>判定参考</th></tr>';
+  let nShown = 0;
+  for (const r of (NW.rows || [])) {
+    let jt, jc;
+    if (r.orders > 0) { jt = '✅ 有单（¥' + Math.round(r.spend / r.orders) + '/单' + (ref ? '，参考¥' + ref : '') + '）'; jc = '#15803d'; }
+    else if (!r.leads && !r.users) { jt = '🔴 零留资零单（查计划/降价/关停）'; jc = '#c2410c'; }
+    else { jt = '🟠 有留资无单（观察素材/套餐）'; jc = '#a16207'; }
+    h += `<tr><td>${(r.creative || '—').slice(0, 34)}</td><td style="font-family:monospace">${(r.note_id || '').slice(0, 16)}</td><td>${MK[r.note_id] || '—'}</td><td>${r.line}</td><td><b>${f2(r.spend)}</b></td><td>${f0(r.mc)}</td><td>${r.mc ? f2(r.spend / r.mc) : '—'}</td><td>${f0(r.leads)}</td><td>${f0(r.users)}</td><td>${f0(r.orders)}</td><td>${r.orders ? f2(r.spend / r.orders) : '—'}</td><td style="color:${jc}">${jt}</td></tr>`;
+    nShown++;
+  }
+  // v10b：无单列行但合并行有消耗/出单时也展示合并行（短链自然单等无笔记证据的单不隐藏）
+  if (!nShown && !((m.spend || 0) > 0 || (m.orders || 0) > 0)) {
+    el.innerHTML = '<tr><td>今日暂无日耗≥¥' + (NW.threshold || 150) + ' 且无出单的笔记</td></tr>';
+    return;
+  }
+  const judgeM = (m.orders || 0) > 0 ? '含 ' + m.orders + ' 单无笔记证据（短链自然单/证据未覆盖）' : '跑量期合并观察';
+  h += `<tr style="color:#667;background:#fafafa"><td colspan="4">${m.title || '其他创意合并'}（${m.n_notes || 0} 笔记）</td><td>${f2(m.spend)}</td><td>${f0(m.mc)}</td><td>${m.mc ? f2(m.spend / m.mc) : '—'}</td><td>${f0(m.leads)}</td><td>${f0(m.users)}</td><td>${f0(m.orders)}</td><td>${m.orders ? f2(m.spend / m.orders) : '—'}</td><td>${judgeM}</td></tr>`;
+  el.innerHTML = h;
 }
 
 // 单笔记历史汇总（2026-10-29 老板指令：跟随顶部区间筛选——昨日/7/15/30天/全部；区间内日耗≥¥150 分开、其余合并）
